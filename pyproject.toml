@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ksef-client"
+version = "0.1.0"
+description = "Minimal-dependency, fully typed KSeF 2.0 (Krajowy System e-Faktur) client for Python 3.12+"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+authors = [{ name = "AgileIndustrialComplex" }]
+keywords = ["ksef", "e-invoicing", "poland", "vat", "fa3"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business :: Financial :: Accounting",
+    "Typing :: Typed",
+]
+dependencies = [
+    # The only runtime dependency: KSeF's auth handshake requires RSA-OAEP
+    # (SHA-256) token encryption and sessions require AES-256-CBC invoice
+    # encryption. Both come from `cryptography`; everything else is stdlib.
+    "cryptography>=42",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[project.urls]
+Repository = "https://github.com/AgileIndustrialComplex/ksef-client-python"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ksef"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src"]
