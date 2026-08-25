@@ -12,6 +12,11 @@ the API contract published in [CIRFMF/ksef-api](https://github.com/CIRFMF/ksef-a
 
 - **KSeF token authentication** — full challenge → RSA-OAEP-SHA256 encrypted
   `token|timestamp` → status polling → token redemption handshake.
+- **Certificate (XAdES) authentication** — build `AuthTokenRequest`, sign it
+  with an X.509 certificate via `ksef.xades.sign_xades` (optional
+  `signxml` dependency: `pip install ksef-client[xades]`), submit, poll,
+  redeem. Includes a self-signed test-certificate generator for the test
+  environment.
 - **Online (interactive) sessions** — open FA(3) session with envelope
   encryption, send AES-256-CBC-encrypted invoices, poll invoice/session
   statuses, close the session, download UPO.

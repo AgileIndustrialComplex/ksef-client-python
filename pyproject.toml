@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ksef-client"
-version = "0.1.1"
+version = "0.1.2"
 description = "Minimal-dependency, fully typed KSeF 2.0 (Krajowy System e-Faktur) client for Python 3.12+"
 readme = "README.md"
 license = { text = "MIT" }
@@ -31,6 +31,7 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest>=8"]
+xades = ["signxml>=3.2", "lxml>=5"]
 
 [project.urls]
 Repository = "https://github.com/AgileIndustrialComplex/ksef-client-python"

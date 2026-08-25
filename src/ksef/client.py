@@ -17,7 +17,7 @@ import base64
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Callable, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Sequence
 
 from ksef._http_json import dumps, loads
 from ksef.config import HTTPTransport, KSeFConfig
@@ -29,6 +29,11 @@ from ksef.exceptions import (
     KSeFPollingTimeoutError,
 )
 from ksef.fa3 import InvoiceData, build_fa3
+from ksef.xades import sign_xades
+
+if TYPE_CHECKING:
+    from ksef import xades
+
 from ksef.models import (
     AuthTokens,
     AuthenticationInitResponse,
@@ -257,6 +262,90 @@ class KSeFClient:
             auth=False,
         )
         self._tokens = AuthTokens.from_api(data)
+        return self._tokens
+
+    def authenticate_with_certificate(
+        self,
+        cert: "xades.LoadedCertificate",
+        nip: str | None = None,
+        subject_identifier_type: "xades.SubjectIdentifierType | str | None" = None,
+    ) -> AuthTokens:
+        """Full certificate (XAdES) authentication handshake.
+
+        1. POST /auth/challenge
+        2. Build the AuthTokenRequest XML and sign it XAdES with ``cert``
+        3. POST /auth/xades-signature with the signed XML
+        4. Poll GET /auth/{referenceNumber} until code == 200
+        5. POST /auth/token/redeem to obtain access + refresh tokens
+
+        Requires the optional ``signxml`` dependency (``ksef-client[xades]``).
+        Self-signed certificates are only accepted by KSeF's test environment.
+        """
+        from ksef import xades as _xades
+
+        if subject_identifier_type is None:
+            subject_identifier_type = _xades.SubjectIdentifierType.CERTIFICATE_SUBJECT
+
+        nip = nip or self._config.nip
+        if not nip:
+            raise KSeFAuthenticationError("No NIP provided for authentication context")
+
+        _, _, ch_data = self._request("POST", "/auth/challenge", json_body={}, auth=False)
+
+        unsigned = _xades.build_auth_token_request(
+            challenge=ch_data["challenge"],
+            context_identifier_type=_xades.ContextIdentifierTypeV2.NIP,
+            context_identifier_value=nip,
+            subject_identifier_type=subject_identifier_type,
+        )
+        signed_xml = sign_xades(unsigned, cert)
+
+        headers = {"Content-Type": "application/xml"}
+        status, resp_headers, resp_body = self._transport_or_default().request(
+            "POST",
+            f"{self.base_url}/auth/xades-signature",
+            headers=headers,
+            body=signed_xml.encode("utf-8"),
+            timeout=self._config.timeout,
+        )
+        init_data = loads(resp_body) if resp_body else {}
+        if status >= 400:
+            raise KSeFHTTPError(
+                status,
+                str(self._extract_problem_message(init_data) or "XAdES submission rejected"),
+                details=init_data if isinstance(init_data, dict) else None,
+            )
+
+        init = AuthenticationInitResponse(
+            reference_number=init_data["referenceNumber"],
+            authentication_token=TokenInfo(
+                token=init_data["authenticationToken"]["token"],
+                valid_until=parse_dt(init_data["authenticationToken"]["validUntil"])
+                or datetime.now(timezone.utc),
+            ),
+        )
+
+        # poll authentication status (same shape as the token flow)
+        deadline = self._clock() + PollOptions().timeout_seconds
+        while True:
+            _, _, st_data = self._request(
+                "GET", f"/auth/{init.reference_number}", auth=False,
+                headers={"Authorization": f"Bearer {init.authentication_token.token}"},
+            )
+            st = parse_status(st_data["status"])
+            if st.code == 200:
+                break
+            if st.code != 100:
+                raise KSeFAuthenticationError(f"Authentication failed: {st.code} {st.description}")
+            if self._clock() > deadline:
+                raise KSeFPollingTimeoutError("Authentication did not complete in time")
+            time.sleep(PollOptions().interval_seconds)
+
+        _, _, tokens_data = self._request(
+            "POST", "/auth/token/redeem", json_body={}, auth=False,
+            headers={"Authorization": f"Bearer {init.authentication_token.token}"},
+        )
+        self._tokens = AuthTokens.from_api(tokens_data)
         return self._tokens
 
     @property

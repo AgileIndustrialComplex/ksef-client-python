@@ -105,6 +105,31 @@ class MockKSeFServer:
                 "clientIp": "127.0.0.1",
             })
 
+        if method == "POST" and path == "/auth/xades-signature":
+            # Mock-level XAdES check: document parses, is an AuthTokenRequest,
+            # and carries a Signature element (real verification happens on
+            # the MF side with full chain/OCSP checks).
+            import xml.etree.ElementTree as ET
+
+            try:
+                root = ET.fromstring(body)
+            except ET.ParseError:
+                return send(400, {"detail": "Invalid XML"})
+            if not root.tag.endswith("AuthTokenRequest"):
+                return send(400, {"detail": "Wrong document type"})
+            if not any(el.tag.endswith("Signature") for el in root.iter()):
+                return send(400, {"detail": "Missing XAdES signature"})
+            ref = f"XADES-{len(self.auth_sessions) + 1}"
+            self.auth_sessions[ref] = {
+                "status": 100,
+                "tmp_token": f"tmp-{ref}",
+                "xades": True,
+            }
+            return send(200, {
+                "referenceNumber": ref,
+                "authenticationToken": {"token": f"tmp-{ref}", "validUntil": (now + timedelta(minutes=5)).isoformat()},
+            })
+
         if method == "POST" and path == "/auth/ksef-token":
             assert data is not None
             try:
@@ -274,6 +299,22 @@ def test_full_token_auth_flow(mock_server):
 def test_auth_rejected_for_bad_token(mock_server):
     with pytest.raises(KSeFAuthenticationError):
         make_client(mock_server.base_url()).authenticate_with_token("wrong-token")
+
+
+def test_certificate_xades_auth_flow(mock_server, monkeypatch):
+    monkeypatch.setattr(_client_mod.time, "sleep", lambda s: None)
+    from ksef import LoadedCertificate, SubjectIdentifierType
+
+    cert = LoadedCertificate.generate_self_signed_test(serial_number="TINPL-5265877635")
+    client = make_client(mock_server.base_url())
+    tokens = client.authenticate_with_certificate(
+        cert, nip="5265877635", subject_identifier_type=SubjectIdentifierType.CERTIFICATE_SUBJECT,
+    )
+    assert tokens.access_token.startswith("access-for-XADES-")
+    assert client.is_authenticated
+    # the mock recorded the xades session and the redeem used its temp token
+    refs = [r for r in mock_server.auth_sessions if r.startswith("XADES-")]
+    assert refs
 
 
 def test_online_session_lifecycle(mock_server, monkeypatch):

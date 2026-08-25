@@ -86,7 +86,7 @@ class FakeTransport(HTTPTransport):
         return 404, {"Content-Type": "application/json"}, b'{"detail": "no route"}'
 
     @staticmethod
-    def _call(handler, req: RecordedRequest) -> tuple[int, dict[str, str], bytes]:
+    def _call(handler: Any, req: RecordedRequest) -> tuple[int, dict[str, str], bytes]:
         status, headers, body = handler(req)
         if isinstance(body, (dict, list)):
             body = json.dumps(body).encode()

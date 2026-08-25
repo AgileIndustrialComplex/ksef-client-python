@@ -14,6 +14,12 @@ from ksef.exceptions import (
 )
 from ksef.fa3 import FA3_NAMESPACE, InvoiceData, InvoiceLine, Party, build_fa3
 from ksef.latarnia import LatarniaClient
+from ksef.xades import (
+    ContextIdentifierTypeV2,
+    LoadedCertificate,
+    SubjectIdentifierType,
+    build_auth_token_request,
+)
 from ksef.models import (
     AuthTokens,
     AuthenticationStatusResponse,
@@ -49,6 +55,10 @@ __all__ = [
     "KSeFHTTPError",
     "KSeFPollingTimeoutError",
     "LatarniaClient",
+    "ContextIdentifierTypeV2",
+    "LoadedCertificate",
+    "SubjectIdentifierType",
+    "build_auth_token_request",
     "OpenSessionResponse",
     "Party",
     "PollOptions",
@@ -61,4 +71,4 @@ __all__ = [
     "build_fa3",
 ]
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
