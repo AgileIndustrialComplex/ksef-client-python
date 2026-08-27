@@ -133,7 +133,10 @@ These hit the **real** Polish KSeF **test** environment
 # Latarnia + public-key discovery (no credentials needed):
 KSEF_LIVE=1 pytest tests/live
 
-# Token-auth, certificate-auth, online-session flow, UPO, rate-limits:
+# Certificate (XAdES/passwordless) auth — only needs a valid NIP:
+KSEF_LIVE=1 KSEF_TEST_NIP="<your-nip>" pytest tests/live -k xades
+
+# Full live suite (token auth, sessions, UPO, rate-limits):
 KSEF_LIVE=1 \
   KSEF_TEST_TOKEN="<your-ksef-test-token>" \
   KSEF_TEST_NIP="<your-tin>" \

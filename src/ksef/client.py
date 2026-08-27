@@ -343,9 +343,14 @@ class KSeFClient:
         )
         init_data = loads(resp_body) if resp_body else {}
         if status >= 400:
+            message = self._extract_problem_message(init_data) or (
+                resp_body[:300].decode("utf-8", "replace")
+                if isinstance(resp_body, bytes)
+                else "XAdES submission rejected"
+            )
             raise KSeFHTTPError(
                 status,
-                str(self._extract_problem_message(init_data) or "XAdES submission rejected"),
+                str(message),
                 details=init_data if isinstance(init_data, dict) else None,
             )
 

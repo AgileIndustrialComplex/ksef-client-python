@@ -47,7 +47,8 @@ testpaths = ["tests"]
 addopts = "-q"
 markers = [
     "live: live integration tests against the real KSeF test environment",
-    "live_token: live test that additionally needs KSEF_TEST_TOKEN + KSEF_TEST_NIP",
+    "live_token: live test that needs KSEF_TEST_TOKEN + KSEF_TEST_NIP",
+    "live_nip: live test that needs only KSEF_TEST_NIP (e.g. certificate auth)",
 ]
 
 [tool.mypy]

@@ -50,11 +50,16 @@ KSEF_LIVE=1 \
 | Variable | Required (full run) | Default | Meaning |
 |----------|---------------------|---------|---------|
 | `KSEF_LIVE` | yes | off | set to `1` (or `true`) to enable any live test |
-| `KSEF_TEST_TOKEN` | for token/session tests | — | the KSeF test token for `KSEF_TEST_NIP` |
-| `KSEF_TEST_NIP` | for token/session tests | — | taxpayer NIP you own the token for |
+| `KSEF_TEST_TOKEN` | token/session tests | — | the KSeF test token for `KSEF_TEST_NIP` |
+| `KSEF_TEST_NIP` | token/session **and** certificate-auth tests | — | taxpayer NIP you own the token for / that the cert is bound to |
 | `KSEF_TEST_BUYER_NIP` | no | `KSEF_TEST_NIP` | invoice buyer NIP; should be a real, registered VAT payer |
 | `KSEF_TEST_BASE_URL` | no | `https://api-test.ksef.mf.gov.pl/v2` | API base URL override |
 | `KSEF_TEST_TIMEOUT` | no | `30` | per-request timeout (seconds) |
+
+> Run just the certificate-auth test with a NIP only:
+> `KSEF_LIVE=1 KSEF_TEST_NIP=<valid-nip> pytest tests/live -k xades`
+> The NIP must be a **valid 10-digit Polish NIP** (KSeF enforces the schema
+> datatype — a value like `0987654321` is rejected before any cert logic).
 
 ## Notes and pitfalls
 

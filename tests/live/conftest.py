@@ -9,7 +9,10 @@ To run them:
     # Latarnia + public-key tests need no credentials:
     KSEF_LIVE=1 pytest tests/live
 
-    # Token-auth + session-flow + rate-limits need a KSeF test token:
+    # Certificate (XADES/passwordless) auth needs only a NIP:
+    KSEF_LIVE=1 KSEF_TEST_NIP=<NIP> pytest tests/live -k xades
+
+    # Token-auth + session-flow + rate-limits need a KSeF test token too:
     KSEF_LIVE=1 KSEF_TEST_TOKEN=<token> KSEF_TEST_NIP=<NIP> pytest tests/live
 
 Environment variables
@@ -53,7 +56,8 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 
     * Every ``@pytest.mark.live`` test skips unless ``KSEF_LIVE=1``.
     * ``@pytest.mark.live_token`` tests additionally require a token + NIP.
-        Latarnia / public-key tests run with just ``KSEF_LIVE=1``.
+    * ``@pytest.mark.live_nip``  tests additionally require just a NIP.
+        Latarnia / public-key tests run with only ``KSEF_LIVE=1``.
     """
     live = _truthy("KSEF_LIVE")
     token = env("KSEF_TEST_TOKEN")
@@ -80,6 +84,15 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
                     pytest.mark.skip(
                         reason="Token-dependent live test needs env: "
                         + ", ".join(missing)
+                    )
+                )
+            continue
+
+        if item.get_closest_marker("live_nip"):
+            if not nip:
+                item.add_marker(
+                    pytest.mark.skip(
+                        reason="This live test needs env: KSEF_TEST_NIP"
                     )
                 )
 

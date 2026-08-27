@@ -13,13 +13,13 @@ from __future__ import annotations
 
 import pytest
 
-pytestmark = [pytest.mark.live, pytest.mark.live_token]
-
 from ksef import KSeFClient, KSeFConfig  # noqa: E402
 from ksef.xades import (  # noqa: E402
     LoadedCertificate,
     SubjectIdentifierType,
 )
+
+pytestmark = [pytest.mark.live]
 
 
 @pytest.fixture(scope="module")
@@ -36,6 +36,7 @@ def self_signed_cert(live_nip: str) -> LoadedCertificate:
     )
 
 
+@pytest.mark.live_token
 def test_token_auth_handshake_live(
     live_config: KSeFConfig, live_token: str, live_nip: str
 ) -> None:
@@ -50,6 +51,7 @@ def test_token_auth_handshake_live(
     assert len(tokens.access_token) >= 20
 
 
+@pytest.mark.live_token
 def test_refresh_access_token_live(authed_client) -> None:
     """POST /auth/token/refresh must rotate the access token in place."""
     before = authed_client._tokens
@@ -62,6 +64,7 @@ def test_refresh_access_token_live(authed_client) -> None:
     assert refreshed.access_token != before.access_token
 
 
+@pytest.mark.live_nip
 def test_certificate_xades_auth_live(
     live_config: KSeFConfig, live_nip: str, self_signed_cert: LoadedCertificate
 ) -> None:
