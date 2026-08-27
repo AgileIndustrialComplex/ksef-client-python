@@ -28,18 +28,24 @@ Environment variables
 from __future__ import annotations
 
 import os
+from typing import TYPE_CHECKING
 
 import pytest
 
 from ksef import Environment, KSeFClient, KSeFConfig
 
+if TYPE_CHECKING:
+    from ksef.xades import LoadedCertificate
+
 __all__ = [
     "authed_client",
     "buyer_nip",
+    "cert_authed_client",
     "env",
     "live_client",
     "live_config",
     "live_nip",
+    "self_signed_cert",
 ]
 
 
@@ -140,5 +146,42 @@ def authed_client(
     """An ``KSeFClient`` authenticated with the challenge -> redeem handshake."""
     client = KSeFClient(live_config)
     client.authenticate_with_token(live_token, nip=live_nip)
+    assert client.is_authenticated
+    return client
+
+
+@pytest.fixture(scope="module")
+def self_signed_cert(live_nip: str) -> "LoadedCertificate":
+    """A freshly generated self-signed certificate (no password, test env only).
+
+    The serial number ``TINPL-<NIP>`` binds the cert to the authenticated
+    taxpayer, so this certificate can only be used to authenticate as ``NIP``.
+    """
+    pytest.importorskip("signxml", reason="ksef-client[xades] not installed")
+    from ksef.xades import LoadedCertificate
+
+    return LoadedCertificate.generate_self_signed_test(
+        serial_number=f"TINPL-{live_nip}"
+    )
+
+
+@pytest.fixture(scope="module")
+def cert_authed_client(
+    live_config: KSeFConfig, live_nip: str, self_signed_cert
+) -> KSeFClient:
+    """A ``KSeFClient`` authenticated with the XAdES certificate flow.
+
+    Unlike ``authed_client`` (token auth), this needs **only ** ``KSEF_TEST_NIP``
+    - no ``KSEF_TEST_TOKEN`` - so the full online-session flow can be exercised
+    on the test env with just a NIP.
+    """
+    from ksef.xades import SubjectIdentifierType
+
+    client = KSeFClient(live_config)
+    client.authenticate_with_certificate(
+        self_signed_cert,
+        nip=live_nip,
+        subject_identifier_type=SubjectIdentifierType.CERTIFICATE_SUBJECT,
+    )
     assert client.is_authenticated
     return client

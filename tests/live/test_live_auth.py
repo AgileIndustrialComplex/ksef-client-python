@@ -22,20 +22,6 @@ from ksef.xades import (  # noqa: E402
 pytestmark = [pytest.mark.live]
 
 
-@pytest.fixture(scope="module")
-def self_signed_cert(live_nip: str) -> LoadedCertificate:
-    """A freshly generated self-signed certificate (no password).
-
-    KSeF's test environment accepts self-signed certificates; the serial
-    number attribute carries ``TINPL-<NIP>`` so the cert is bound to the
-    authenticated taxpayer NIP.
-    """
-    pytest.importorskip("signxml", reason="ksef-client[xades] not installed")
-    return LoadedCertificate.generate_self_signed_test(
-        serial_number=f"TINPL-{live_nip}"
-    )
-
-
 @pytest.mark.live_token
 def test_token_auth_handshake_live(
     live_config: KSeFConfig, live_token: str, live_nip: str

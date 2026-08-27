@@ -14,6 +14,7 @@ CIRFMF/ksef-client-java):
 from __future__ import annotations
 
 import base64
+import hashlib
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -54,6 +55,11 @@ from ksef.models import (
 )
 
 _RETRYABLE = {429, 500, 502, 503, 504}
+
+
+def _base64_sha256(data: bytes) -> str:
+    """Base64-encoded SHA-256 digest of ``data`` (KSeF sends hashes Base64)."""
+    return base64.b64encode(hashlib.sha256(data).digest()).decode("ascii")
 
 
 def _cert_has_usage(cert: dict[str, Any], *tags: str) -> bool:
@@ -528,12 +534,22 @@ class KSeFClient:
         encryption: SessionEncryption,
         invoice_number: str | None = None,
     ) -> SendInvoiceResponse:
-        """Send pre-built invoice XML inside an open online session."""
+        """Send pre-built invoice XML inside an open online session.
+
+        Builds the KSeF 2.0 ``SendInvoiceRequest`` envelope (5 fields): the
+        plaintext ``invoiceHash``/``invoiceSize`` and the ``encryptedInvoiceHash``
+        / ``encryptedInvoiceSize`` / ``encryptedInvoiceContent`` (hash, size and
+        AES-encrypted body of the FA(3)).
+        """
         enc = encrypt_invoice(xml_bytes, encryption)
+        encrypted_bytes = base64.b64decode(enc.encrypted_body_b64)
         body: dict[str, Any] = {
             "invoiceHash": enc.sha256_base64,
-            "invoiceSize": len(base64.b64decode(enc.encrypted_body_b64)),
-            "invoiceContent": enc.encrypted_body_b64,
+            "invoiceSize": len(xml_bytes),
+            "encryptedInvoiceHash": _base64_sha256(encrypted_bytes),
+            "encryptedInvoiceSize": len(encrypted_bytes),
+            "encryptedInvoiceContent": enc.encrypted_body_b64,
+            "offlineMode": False,
         }
         if invoice_number:
             body["invoiceNumber"] = invoice_number

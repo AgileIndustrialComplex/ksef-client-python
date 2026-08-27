@@ -206,8 +206,19 @@ class MockKSeFServer:
             if not sess or sess["closed"]:
                 return send(404, {"detail": "No such open session"})
             inv_hash = data["invoiceHash"]
-            xml = decrypt_invoice(data["invoiceContent"], type("E", (), {
+            encrypted_body = data["encryptedInvoiceContent"]
+            # verify the encrypted-hash/size fields match the body (KSeF 2.0 contract)
+            import hashlib as _hl
+
+            ciphertext = b64decode(encrypted_body)
+            assert data["encryptedInvoiceSize"] == len(ciphertext)
+            assert data["encryptedInvoiceHash"] == b64encode(
+                _hl.sha256(ciphertext).digest()
+            ).decode()
+            xml = decrypt_invoice(encrypted_body, type("E", (), {
                 "aes_key": sess["aes_key"], "iv": sess["iv"]})())
+            assert data["invoiceSize"] == len(xml)
+            assert data["invoiceHash"] == b64encode(_hl.sha256(xml).digest()).decode()
             inv_ref = f"INV/{len(sess['invoices']) + 1:04d}"
             ksef_number = f"1234567890-20260825-{session_ref[-5:]}{len(sess['invoices']) + 1:06d}-AB"
             sess["invoices"][inv_ref] = {"hash": inv_hash, "xml": xml, "ksef_number": ksef_number, "polls": 0}

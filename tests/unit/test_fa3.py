@@ -29,8 +29,10 @@ def test_build_fa3_structure():
     assert 'kodSystemowy="FA (3)"' in text
     assert 'wersjaSchemy="1-0E"' in text
     assert "<P_2>FV/1/08/2026</P_2>" in text
-    assert "<StawkaVAT>23</StawkaVAT>" in text
-    assert "<StawkaVAT>zw</StawkaVAT>" in text
+    # FA(3) buckets money by coded rate: 1->23%, 2->8%, 3->5%, 4->0%, 5->zw
+    assert "<P_13_1>200.00</P_13_1>" in text  # 23% net bucket
+    assert "<P_13_5>50.00</P_13_5>" in text   # zw net bucket
+    assert "<RodzajFaktury>VAT</RodzajFaktury>" in text
     assert f'xmlns="{FA3_NAMESPACE}"' in text
 
 
@@ -40,8 +42,9 @@ def test_totals_math():
     assert inv.total_vat == Decimal("46.00")  # only the 23% line carries VAT
     assert inv.total_gross == Decimal("296.00")
     xml = build_fa3(inv).decode()
-    assert "<Netto>250.00</Netto>" in xml
-    assert "<Brutto>296.00</Brutto>" in xml
+    assert "<P_15>296.00</P_15>" in xml  # gross total
+    assert "<DoZaplaty>296.00</DoZaplaty>" in xml
+    assert "<P_14_1>46.00</P_14_1>" in xml  # 23% VAT on the first line
 
 
 def test_parse_fields_roundtrip():
