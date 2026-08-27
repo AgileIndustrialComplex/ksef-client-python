@@ -23,6 +23,8 @@ the API contract published in [CIRFMF/ksef-api](https://github.com/CIRFMF/ksef-a
 - **FA(3) XML builder** — stdlib-only generation of minimal valid FA(3)
   invoices (`ksef.fa3`).
 - **Latarnia** — unauthenticated KSeF availability/status API (`ksef.latarnia`).
+- **`ksef-client` CLI** — generate an RSA key pair + self-signed X.509 cert for
+  certificate (XAdES) authentication (`gen-cert`).
 - **Typed end to end** — ships `py.typed`; strict-mypy clean.
 
 ## Dependencies
@@ -38,6 +40,8 @@ itself (RSA-OAEP token/key encryption, AES-CBC invoice envelope). HTTP uses
 pip install .
 # dev/test extras:
 pip install -e '.[test]'
+# CLI is available after any install:
+ksef-client gen-cert --help
 ```
 
 ## Quickstart
@@ -74,6 +78,25 @@ upo = client.get_invoice_upo_by_reference(session.reference_number, sent.referen
 Always develop against `Environment.TEST`
 (`https://api-test.ksef.mf.gov.pl/v2`) — production submissions have real legal
 consequences.
+
+## CLI: generate a certificate + key pair
+
+```bash
+ksef-client gen-cert --nip 5265877635 --out-dir ./certs
+```
+
+Writes `cert.pem` (self-signed X.509, serial `TINPL-<NIP>`) and `key.pem`
+(RSA-2048, PKCS#8) for **KSeF certificate (XAdES) authentication**. Add
+`--ask-password` to encrypt the private key, and `--cn/--country/--days/--key-size`
+to customise the subject and key.
+
+```python
+from ksef.xades import LoadedCertificate
+cert = LoadedCertificate.from_pem("./certs/cert.pem", "./certs/key.pem")  # key_password=... if encrypted
+```
+
+The test environment accepts self-signed certificates; production requires a
+qualified seal.
 
 ## Testing
 

@@ -36,6 +36,9 @@ xades = ["signxml>=3.2", "lxml>=5"]
 [project.urls]
 Repository = "https://github.com/AgileIndustrialComplex/ksef-client-python"
 
+[project.scripts]
+ksef-client = "ksef.cli:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/ksef"]
 
