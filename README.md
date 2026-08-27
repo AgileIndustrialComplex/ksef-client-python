@@ -90,13 +90,26 @@ Writes `cert.pem` (self-signed X.509, serial `TINPL-<NIP>`) and `key.pem`
 `--ask-password` to encrypt the private key, and `--cn/--country/--days/--key-size`
 to customise the subject and key.
 
+Or use the bundled wrapper script (auto-locates the venv, verifies the files
+load back):
+
+```bash
+bash scripts/gen-cert.sh --nip 5265877635              # writes ./certs/cert.pem + key.pem
+bash scripts/gen-cert.sh --nip 5265877635 --ask-password --out-dir ./secrets
+```
+
 ```python
 from ksef.xades import LoadedCertificate
 cert = LoadedCertificate.from_pem("./certs/cert.pem", "./certs/key.pem")  # key_password=... if encrypted
 ```
 
-The test environment accepts self-signed certificates; production requires a
-qualified seal.
+The certificate is **bound to the NIP it was generated for** (`TINPL-<NIP>` in
+its serial). It can only be used to authenticate as that taxpayer: the client
+validates this and fails fast if a mismatched NIP is given
+(see `authenticate_with_certificate`).
+
+> The test environment accepts self-signed certificates; production requires a
+> qualified seal.
 
 ## Testing
 
