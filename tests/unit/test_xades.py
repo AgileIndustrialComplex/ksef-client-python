@@ -20,7 +20,7 @@ def test_build_auth_token_request_structure():
     )
     assert f'xmlns="{AUTH_NS}"' in xml
     assert "<Challenge>20260825-CR-TEST</Challenge>" in xml
-    assert "<nip>5265877635</nip>" in xml
+    assert "<Nip>5265877635</Nip>" in xml
     assert "<SubjectIdentifierType>certificateSubject</SubjectIdentifierType>" in xml
     assert xml.startswith("<?xml")
 

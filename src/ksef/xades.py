@@ -44,9 +44,9 @@ class SubjectIdentifierType(StrEnum):
 
 
 class ContextIdentifierTypeV2(StrEnum):
-    NIP = "nip"
-    INTERNAL_ID = "internalId"
-    NIP_VAT_UE = "nipVatUe"
+    NIP = "Nip"
+    INTERNAL_ID = "InternalId"
+    NIP_VAT_UE = "NipVatUe"
 
 
 class CertificateSource(Protocol):
