@@ -11,8 +11,8 @@ from typing import Any
 class Environment(StrEnum):
     """KSeF API environments."""
 
-    TEST = "https://api-test.ksef.mf.gov.pl"
-    PRODUCTION = "https://api.ksef.mf.gov.pl"
+    TEST = "https://api-test.ksef.mf.gov.pl/v2"
+    PRODUCTION = "https://api.ksef.mf.gov.pl/v2"
     # Latarnia (public availability status) endpoints, no auth required.
     LATARNIA_TEST = "https://api-latarnia-test.ksef.mf.gov.pl"
     LATARNIA_PRODUCTION = "https://api-latarnia.ksef.mf.gov.pl"

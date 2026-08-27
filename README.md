@@ -72,7 +72,7 @@ upo = client.get_invoice_upo_by_reference(session.reference_number, sent.referen
 ```
 
 Always develop against `Environment.TEST`
-(`api-test.ksef.mf.gov.pl`) — production submissions have real legal
+(`https://api-test.ksef.mf.gov.pl/v2`) — production submissions have real legal
 consequences.
 
 ## Testing
