@@ -40,6 +40,10 @@ def test_self_signed_test_certificate_generation():
     from cryptography.x509.oid import NameOID
 
     cert = LoadedCertificate.generate_self_signed_test(serial_number="TINPL-5265877635")
+    # KSeF requires givenName (2.5.4.42) + surname (2.5.4.4) on signature certs;
+    # without them /auth/xades-signature rejects the cert (21115)
+    for oid in (NameOID.GIVEN_NAME, NameOID.SURNAME):
+        assert cert.certificate.subject.get_attributes_for_oid(oid), f"missing {oid.dotted_string}"
     sn_attr = cert.certificate.subject.get_attributes_for_oid(NameOID.SERIAL_NUMBER)
     assert sn_attr and sn_attr[0].value == "TINPL-5265877635"
     fp = cert.certificate_fingerprint()

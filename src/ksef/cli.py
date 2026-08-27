@@ -132,6 +132,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     gen.add_argument("--nip", required=True, help="taxpayer NIP (binds the cert subject)")
     gen.add_argument(
+        "--given-name",
+        default="Test",
+        help="certificate givenName (KSeF requires it for signature certs)",
+    )
+    gen.add_argument(
+        "--surname",
+        default="Kowalski",
+        help="certificate surname (KSeF requires it for signature certs)",
+    )
+    gen.add_argument(
         "--cn",
         default=None,
         help="certificate Common Name (default: derived from NIP)",
@@ -153,6 +163,8 @@ def _cmd_gen_cert(args: argparse.Namespace) -> int:
     cn = args.cn or f"ksef-client test {args.nip}"
     subject = x509.Name(
         [
+            x509.NameAttribute(NameOID.GIVEN_NAME, args.given_name),
+            x509.NameAttribute(NameOID.SURNAME, args.surname),
             x509.NameAttribute(NameOID.COMMON_NAME, cn),
             x509.NameAttribute(NameOID.COUNTRY_NAME, args.country),
             x509.NameAttribute(NameOID.SERIAL_NUMBER, _serial_number_oid(args.country, args.nip)),

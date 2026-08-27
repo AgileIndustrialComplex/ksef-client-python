@@ -92,7 +92,9 @@ class LoadedCertificate:
     def generate_self_signed_test(
         cls,
         *,
-        common_name: str = "Test User",
+        given_name: str = "Test",
+        surname: str = "Kowalski",
+        common_name: str = "Test Kowalski",
         serial_number: str = f"TINPL-{'0000000000'}",
         country: str = "PL",
     ) -> "LoadedCertificate":
@@ -100,7 +102,10 @@ class LoadedCertificate:
 
         Mimics the reference clients' test-certificate helpers: serial number
         carries the identifier KSeF reads (e.g. ``TINPL-<NIP>`` for NIP-based
-        subject identification).
+        subject identification) and the subject carries the ``givenName`` +
+        ``surname`` attributes KSeF requires on signature certificates, so the
+        generated cert is actually accepted by ``/auth/xades-signature`` on the
+        test environment.
         """
         import datetime
 
@@ -112,6 +117,8 @@ class LoadedCertificate:
         key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         name = x509.Name(
             [
+                x509.NameAttribute(NameOID.GIVEN_NAME, given_name),
+                x509.NameAttribute(NameOID.SURNAME, surname),
                 x509.NameAttribute(NameOID.COMMON_NAME, common_name),
                 x509.NameAttribute(NameOID.COUNTRY_NAME, country),
                 x509.NameAttribute(NameOID.SERIAL_NUMBER, serial_number),
