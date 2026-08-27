@@ -13,7 +13,7 @@ handshake, opening real online sessions, and downloading real UPOs.
 |------|-----------|------------------------|
 | Auth (token) | `test_live_auth.py` | `authenticate_with_token`, `is_authenticated` |
 | Auth (refresh) | `test_live_auth.py` | `refresh_access_token` |
-| Auth (XAdES cert) | `test_live_auth.py` | `authenticate_with_certificate` (self-signed test cert) |
+| Auth (XAdES cert) | `test_live_auth.py` | `authenticate_with_certificate` (auto-generated self-signed, passwordless cert) |
 | Public keys | `test_live_public_keys.py` | `fetch_public_key_certificates`, `fetch_public_encryption_key` |
 | Online session | `test_live_session_flow.py` | `open_online_session`, `send_invoice`, `wait_for_invoice`, `get_invoice_status`, `get_session_status`, `close_online_session`, `get_invoice_upo_by_reference` |
 | Raw XML send | `test_live_session_flow.py` | `send_invoice_xml` (FA(3) passthrough) |
@@ -26,7 +26,11 @@ handshake, opening real online sessions, and downloading real UPOs.
   environment (obtain it from the test `Aplikacja Podatnika` / the MF test
   console).
 - Python **3.12+** with dev install: `.venv/bin/pip install -e '.[test,xades]'`
-  — the `[xades]` extras are only needed for the certificate-auth test.
+  — the `[xades]` extras are needed for the certificate-auth test.
+- The XAdES certificate test is **fully passwordless**: it auto-generates a
+  self-signed certificate (`LoadedCertificate.generate_self_signed_test`, no
+  private-key password, serial `TINPL-<NIP>`) at fixture time, so no cert/key
+  files or passwords need to be provisioned.
 
 ## How to run
 
