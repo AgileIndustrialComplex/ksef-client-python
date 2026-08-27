@@ -80,11 +80,37 @@ consequences.
 ```bash
 pytest tests/unit     # crypto, FA(3) builder, client logic (no network)
 pytest tests/e2e      # full flows against an in-process mock KSeF server
+pytest tests/live     # LIVE integration tests against the real KSeF test env (opt-in)
 ```
 
 The e2e suite runs a stateful mock implementing the real endpoint contract,
 including server-side decryption of client-encrypted invoices to prove the
 crypto round-trip.
+
+### Live integration tests (`tests/live`)
+
+These hit the **real** Polish KSeF **test** environment
+(`https://api-test.ksef.mf.gov.pl/v2`) and are gated entirely behind
+`KSEF_LIVE=1` so a normal `pytest` run stays offline and hermetic:
+
+```bash
+# Latarnia + public-key discovery (no credentials needed):
+KSEF_LIVE=1 pytest tests/live
+
+# Token-auth, certificate-auth, online-session flow, UPO, rate-limits:
+KSEF_LIVE=1 \
+  KSEF_TEST_TOKEN="<your-ksef-test-token>" \
+  KSEF_TEST_NIP="<your-tin>" \
+  pytest tests/live
+```
+
+Optional: `KSEF_TEST_BUYER_NIP` (invoice buyer, defaults to the seller's NIP),
+`KSEF_TEST_BASE_URL` (defaults to the test environment) and
+`KSEF_TEST_TIMEOUT` (per-request timeout). See `tests/live/README.md`.
+
+> These tests keep the whole library's client surface exercised against the
+> real contract, but they cannot assert correctness without valid credentials
+> and are deliberately not run by CI.
 
 ## Status
 

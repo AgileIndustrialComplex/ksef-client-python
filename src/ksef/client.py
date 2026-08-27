@@ -56,6 +56,23 @@ from ksef.models import (
 _RETRYABLE = {429, 500, 502, 503, 504}
 
 
+def _cert_has_usage(cert: dict[str, Any], *tags: str) -> bool:
+    """True if any ``usage`` on the cert contains any of ``tags`` (substring).
+
+    The live API reports tags such as ``KsefTokenEncryption`` and
+    ``SymmetricKeyEncryption`` (compound values), so compare as substrings,
+    not exact equality, and tolerate a string or a list of strings.
+    """
+    usage = cert.get("usage") or []
+    if isinstance(usage, str):
+        usage = [usage]
+    for value in usage:
+        for tag in tags:
+            if tag in str(value):
+                return True
+    return False
+
+
 @dataclass(frozen=True, slots=True)
 class PollOptions:
     interval_seconds: float = 1.0
@@ -360,6 +377,10 @@ class KSeFClient:
         _, _, data = self._request(
             "GET", "/security/public-key-certificates", auth=False
         )
+        # The live API returns a bare JSON array; some mocks wrap it in a
+        # {certificates: [...]} envelope. Accept both.
+        if isinstance(data, list):
+            return data
         certs = data.get("certificates", []) if isinstance(data, dict) else []
         return certs
 
@@ -371,8 +392,7 @@ class KSeFClient:
         """
         certs = self.fetch_public_key_certificates()
         for cert in certs:
-            usages = cert.get("usage", [])
-            if "KsefToken" not in usages and "Encryption" not in usages:
+            if not _cert_has_usage(cert, "KsefToken", "Encryption"):
                 continue
             material = cert.get("certificate", "")
             if not material:
@@ -421,7 +441,7 @@ class KSeFClient:
         try:
             certs = self.fetch_public_key_certificates()
             for cert in certs:
-                if "KsefToken" in cert.get("usage", []):
+                if _cert_has_usage(cert, "KsefToken"):
                     public_key_id = cert.get("identifier") or cert.get("publicKeyId")
         except Exception:
             pass

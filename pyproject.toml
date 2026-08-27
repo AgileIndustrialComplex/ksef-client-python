@@ -42,6 +42,10 @@ packages = ["src/ksef"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+markers = [
+    "live: live integration tests against the real KSeF test environment",
+    "live_token: live test that additionally needs KSEF_TEST_TOKEN + KSEF_TEST_NIP",
+]
 
 [tool.mypy]
 python_version = "3.12"
