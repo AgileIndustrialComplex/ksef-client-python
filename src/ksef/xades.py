@@ -137,6 +137,30 @@ class LoadedCertificate:
         return self.certificate.fingerprint(hashes.SHA256()).hex()
 
 
+def tax_number_from_certificate(cert: "LoadedCertificate") -> str | None:
+    """Extract the taxpayer identifier bound to the certificate, if any.
+
+    KSeF derives the subject identifier from the serial-number attribute
+    (OID 2.5.4.97) when authenticating by ``certificateSubject``. Our generated
+    test certs carry ``TINPL-<NIP>`` (Poland) or ``<COUNTRY>-<id>`` otherwise.
+    Returns the numeric part (e.g. the NIP) when the serial has a ``TINPL-`` /
+    ``TIN-`` prefix, else ``None``.
+    """
+    from cryptography.x509.oid import NameOID
+
+    serial = cert.certificate.subject.get_attributes_for_oid(NameOID.SERIAL_NUMBER)
+    if not serial:
+        return None
+    raw = serial[0].value
+    value = raw if isinstance(raw, str) else (raw.decode("utf-8") if isinstance(raw, bytes) else str(raw))
+    value = value.strip()
+    for prefix in ("TINPL-", "TIN-", "tinpl-", "tin-"):
+        if value.upper().startswith(prefix.upper()):
+            number = value[len(prefix):]
+            return number or None
+    return None
+
+
 def build_auth_token_request(
     challenge: str,
     context_identifier_type: ContextIdentifierTypeV2 | str,
@@ -212,4 +236,5 @@ __all__ = [
     "SubjectIdentifierType",
     "build_auth_token_request",
     "sign_xades",
+    "tax_number_from_certificate",
 ]

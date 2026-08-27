@@ -73,6 +73,14 @@ def _cert_has_usage(cert: dict[str, Any], *tags: str) -> bool:
     return False
 
 
+def _is_subject_identifier(value: Any, expected: Any) -> bool:
+    """True if ``value`` names the given subject-identifier type.
+
+    Tolerates both the enum member and its string value.
+    """
+    return value == expected or str(value) == str(expected)
+
+
 @dataclass(frozen=True, slots=True)
 class PollOptions:
     interval_seconds: float = 1.0
@@ -306,6 +314,14 @@ class KSeFClient:
         nip = nip or self._config.nip
         if not nip:
             raise KSeFAuthenticationError("No NIP provided for authentication context")
+
+        if _is_subject_identifier(subject_identifier_type, _xades.SubjectIdentifierType.CERTIFICATE_SUBJECT):
+            cert_nip = _xades.tax_number_from_certificate(cert)
+            if cert_nip is not None and cert_nip != nip:
+                raise KSeFAuthenticationError(
+                    f"Certificate is bound to NIP {cert_nip} but {nip} was provided; "
+                    "use a certificate generated for the authenticating taxpayer."
+                )
 
         _, _, ch_data = self._request("POST", "/auth/challenge", json_body={}, auth=False)
 
