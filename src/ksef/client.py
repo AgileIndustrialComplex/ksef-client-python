@@ -406,13 +406,29 @@ class KSeFClient:
         return certs
 
     def fetch_public_encryption_key(self) -> str:
-        """Return the PEM public key of the current MoF encryption certificate.
+        """Return the PEM public key of the MoF encryption certificate.
 
-        Accepts both X.509 certificates and bare SubjectPublicKeyInfo blobs,
-        in PEM or Base64 DER form.
+        Online-session / invoice encryption must use the **SymmetricKeyEncryption**
+        key, not the KsefTokenEncryption key (that one encrypts the auth token).
+        Accepts both X.509 certificates and bare SubjectPublicKeyInfo blobs, in
+        PEM or Base64 DER form.
         """
         certs = self.fetch_public_key_certificates()
-        for cert in certs:
+
+        def _usage(cert: dict[str, Any]) -> str:
+            usage = cert.get("usage") or ""
+            if isinstance(usage, list):
+                usage = " ".join(str(u) for u in usage)
+            return str(usage)
+
+        # Prefer a cert whose usage names SymmetricKeyEncryption; fall back to
+        # any cert carrying KsefToken/Encryption usage.
+        ordered = sorted(
+            certs,
+            key=lambda c: (0 if "SymmetricKeyEncryption" in _usage(c) else
+                           1 if (_cert_has_usage(c, "KsefToken") or _cert_has_usage(c, "Encryption")) else 2),
+        )
+        for cert in ordered:
             if not _cert_has_usage(cert, "KsefToken", "Encryption"):
                 continue
             material = cert.get("certificate", "")
@@ -459,11 +475,19 @@ class KSeFClient:
     def prepare_session_encryption(self) -> SessionEncryption:
         public_key_id: str | None = None
         pem = self.fetch_public_encryption_key()
+        # Pick the publicKeyId from the SAME cert whose key we encrypt with —
+        # the SymmetricKeyEncryption cert — so the envelope key identifier
+        # matches the encryption key. Using the KsefToken key id here makes
+        # KSeF reject the session with 21470 (unknown/retired key).
         try:
             certs = self.fetch_public_key_certificates()
             for cert in certs:
-                if _cert_has_usage(cert, "KsefToken"):
+                usage = cert.get("usage") or ""
+                if isinstance(usage, list):
+                    usage = " ".join(str(u) for u in usage)
+                if "SymmetricKeyEncryption" in str(usage) or _cert_has_usage(cert, "SymmetricKeyEncryption"):
                     public_key_id = cert.get("identifier") or cert.get("publicKeyId")
+                    break
         except Exception:
             pass
         return new_session_encryption(pem, public_key_id=public_key_id)

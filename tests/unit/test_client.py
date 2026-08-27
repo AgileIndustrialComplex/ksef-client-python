@@ -160,3 +160,38 @@ def test_rate_limits_passthrough():
     client._tokens = AuthTokens("a", "r", datetime.now(timezone.utc), datetime.now(timezone.utc))
     limits = client.rate_limits()
     assert limits.raw == payload
+
+
+def test_session_encryption_prefers_symmetric_key(transport: FakeTransport):
+    """Prepare-session encryption must use the SymmetricKeyEncryption key (and
+    its publicKeyId), not the KsefTokenEncryption key — using the token key id
+    makes KSeF reject the session with error 21470."""
+    priv_token, pub_token = generate_rsa_keypair()
+    priv_sym, pub_sym = generate_rsa_keypair()
+    token_id = "IPbPM4CB49vtoR/x/3fEI+Y+Q6lK/bVVehQ7/NlPJoo="
+    sym_id = "tmtCidSRzR4fvNpLU5hMOM6FzamxJf0BBR8IkXIAwsY="
+    # order deliberately lists the token-encryption cert FIRST to ensure the
+    # client prefers the symmetric key rather than the first match.
+    transport.routes[("GET", "/security/public-key-certificates")] = (
+        lambda req: json_response({"certificates": [
+            {"certificate": pub_token.replace("\n", ""), "usage": ["KsefTokenEncryption"],
+             "publicKeyId": token_id},
+            {"certificate": pub_sym.replace("\n", ""), "usage": ["SymmetricKeyEncryption"],
+             "publicKeyId": sym_id},
+        ]})
+    )
+    client = make_client(transport)
+    enc = client.prepare_session_encryption()
+    assert enc.api_view.public_key_id == sym_id
+
+    # the envelope must decrypt with the symmetric private key (not the token
+    # key), proving the client encrypted with the right public key.
+    from cryptography.hazmat.primitives import serialization as _ser
+    from cryptography.hazmat.primitives.asymmetric import padding as _pad
+    priv_sym_key = _ser.load_pem_private_key(priv_sym.encode(), password=None)
+    aes_key = priv_sym_key.decrypt(
+        b64decode(enc.api_view.encrypted_symmetric_key),
+        _pad.OAEP(mgf=_pad.MGF1(algorithm=hashes.SHA256()),
+                  algorithm=hashes.SHA256(), label=None),
+    )
+    assert len(aes_key) == 32  # AES-256 key recovered with the symmetric key
